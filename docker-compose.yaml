@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+
+  web:
+    restart: always
+    build: ./Load_files
+    command: >
+        sh -c "python manage.py collectstatic --noinput &&
+        python manage.py makemigrations &&
+        python manage.py migrate &&
+        python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./Load_files/:/usr/src/app/
+    ports:
+      - "8080:8000"
+    env_file:
+      - ./Load_files/.env
+    depends_on:
+      - postgres
+      - redis
+
+  celery:
+    build: ./Load_files
+    command: celery -A Load_files worker -l INFO
+    volumes:
+      - ./Load_files/:/usr/src/app/
+    depends_on:
+      - web
+      - redis
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6319:6379"
+
+  postgres:
+    restart: always
+    container_name: LoadFiles_postgres
+    image: postgres:13.2
+    env_file:
+      - ./Load_files/.env
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5455:5432"
